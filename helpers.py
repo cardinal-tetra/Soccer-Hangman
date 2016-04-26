@@ -47,3 +47,35 @@ def moves_gone(moves_left):
     """This checks if there are still moves left in the game"""
     if moves_left < 1:
         return True
+
+def update(game):
+    game.moves_left -= 1
+    game.guesses_made += 1
+    return game
+
+def game_won(game):
+    game.game_status = 'won'
+    message = 'You have won the game!'
+    hint = reveal_answer(game.answer)
+    game.put()
+    return game.to_form(message, hint, 'won')
+
+def game_over(game, msg=''):
+    game.game_status = 'lost'
+    message = msg + 'You have lost the game!'
+    hint = reveal_answer(game.answer)
+    game.put()
+    return game.to_form(message, hint, 'lost')
+
+def wrong_guess(game):
+    message = 'Wrong guess! Try again!'
+    hint = produce_hint(game.answer)
+    game.put()
+    return game.to_form(message, hint, 'ongoing')
+
+def correct_guess(game):
+    message = 'Correct! Keep going!'
+    hint = produce_hint(game.answer)
+    game.put()
+    return game.to_form(message, hint, 'ongoing')
+    

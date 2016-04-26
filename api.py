@@ -4,9 +4,10 @@ import random
 import endpoints
 from protorpc import remote, messages
 
-from models import User, Game
-from models import StringMessage, GameForm
+from models import User, Game, Score
+from models import StringMessage, GameForm, ScoreForm
 from helpers import produce_hint, moves_gone, reveal_answer, get_by_urlsafe
+from helpers import update, game_won, game_over, wrong_guess, correct_guess
 
 # resource containers
 USER_REQUEST = endpoints.ResourceContainer(
@@ -61,7 +62,7 @@ class soccerhangman(remote.Service):
         answer = [[x, False] for x in answer] # boolean for whether letter guessed
 
         # store a game entity where user starts with 6 moves and 0 guesses
-        game = Game.new_game(user.key, answer, 6, 0)
+        game = Game.new_game(user.key, answer, 6, 0, 'ongoing')
 
         # produce message
         message = 'A new game has been created for you %s' % request.username
@@ -70,7 +71,7 @@ class soccerhangman(remote.Service):
         hint = produce_hint(answer)
 
         # make form and return to user
-        return game.to_form(message, hint)
+        return game.to_form(message, hint, 'ongoing')
 
     @endpoints.method(GET_GAME, GameForm, path='game/{urlsafe_game_key}',
                       name='get_game', http_method='GET')
@@ -86,32 +87,51 @@ class soccerhangman(remote.Service):
         hint = produce_hint(game.answer)
 
         # make form and return to user
-        return game.to_form(message, hint)
+        return game.to_form(message, hint, game.game_status)
 
     @endpoints.method(MOVE, GameForm, path='game/{urlsafe_game_key}',
                       name='make_move', http_method='PUT')
     def make_move(self, request):
         """guess the player"""
-        # make sure the guess is a single letter
-        if not request.guess.isalpha() or len(request.guess) != 1:
-            raise endpoints.BadRequestException('Please specify a single letter')
-        guess = request.guess.lower()
-        
         # retrieve game entity by urlsafe key
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if not game:
             raise endpoints.NotFoundException('No such game')
 
         # check if game is already over
+        if game.game_status != 'ongoing':
+            raise endpoints.BadRequestException('Game is already over')
+
+        # if the user is guessing an entire word
+        if len(request.guess) > 1 and request.guess.isalpha():
+            # update moves left and guesses made
+            game = update(game)
+            # check if the user has guessed correctly
+            if request.guess == reveal_answer(game.answer):
+                return game_won(game)
+            else:
+                # if the user guessed wrong, check if they have moves left
+                if moves_gone(game.moves_left):
+                    return game_over(game)
+                else:
+                    return wrong_guess(game)
+        # if user's word guess is malformed
+        elif len(request.guess) > 1 and not request.guess.isalpha():
+            raise endpoints.BadRequestException('Word has to be all letters')
+
+        # if the user is guessing letter by letter
+        if len(request.guess) == 1 and not request.guess.isalpha():
+            raise endpoints.BadRequestException('Provide just one single letter!')
+
+        guess = request.guess.lower()           
 
         # update moves left and guesses made
-        game.moves_left -= 1
-        game.guesses_made += 1
+        game = update(game)
 
         # iterate through entire answer to see if user guessed correctly
         correct = False
         for letter in game.answer:
-            if letter[1] == False and letter[0] == guess:
+            if letter[0] == guess and letter[1] == False:
                 letter[1] = True
                 correct = True
 
@@ -122,36 +142,20 @@ class soccerhangman(remote.Service):
                 if letter[1] == False: # they have not won the game
                     # check if moves exhausted
                     if moves_gone(game.moves_left) == True:
-                        message = 'Correct but Game Over!'
-                        hint = reveal_answer(game.answer)
-                        game.put()
-                        return game.to_form(message, hint)
+                        return game_over(game, 'Correct, however ...')
                     else:
-                        message = 'Guessed Correct!'
-                        hint = produce_hint(game.answer)
-                        game.put()
-                        return game.to_form(message, hint)
+                        return correct_guess(game)
             # user has won the game
-            message = 'You have won the game!'
-            hint = reveal_answer(game.answer)
-            game.put()
-            return game.to_form(message, hint)
+            return game_won(game)
         # user has not guessed correctly
         else:
             # check if they have run out of moves
             if moves_gone(game.moves_left) == True:
-                message = 'Not Correct! Game Over! Sorry!'
-                hint = reveal_answer(game.answer)
-                game.put()
-                return game.to_form(message, hint)
+                return game_over(game, 'Wrong! ')
             else:
-                message = 'Not Correct!'
-                hint = produce_hint(game.answer)
-                game.put()
-                return game.to_form(message, hint)
-                        
-                    
-        
-                               
+                return wrong_guess(game)
+
+
+                                      
 # launch endpoints API
 api = endpoints.api_server([soccerhangman])
