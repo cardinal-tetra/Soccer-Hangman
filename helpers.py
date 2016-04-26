@@ -2,6 +2,8 @@
 import logging
 from google.appengine.ext import ndb
 import endpoints
+from models import Score
+from datetime import date
 
 def get_by_urlsafe(urlsafe, model):
     """returns entity corresponding to urlsafe key, code based on that in 'make a number'"""
@@ -49,31 +51,42 @@ def moves_gone(moves_left):
         return True
 
 def update(game):
+    """updates game stats after user makes a move"""
     game.moves_left -= 1
     game.guesses_made += 1
     return game
 
 def game_won(game):
+    """user has won the game, update scores"""
     game.game_status = 'won'
     message = 'You have won the game!'
     hint = reveal_answer(game.answer)
     game.put()
+    score = Score(user = game.username, date = date.today(),
+                  won = True, guesses = game.guesses_made)
+    score.put()
     return game.to_form(message, hint, 'won')
 
 def game_over(game, msg=''):
+    """user has lost the game, update scores"""
     game.game_status = 'lost'
     message = msg + 'You have lost the game!'
     hint = reveal_answer(game.answer)
     game.put()
+    score = Score(user = game.username, date = date.today(),
+                  won = False, guesses = game.guesses_made)
+    score.put()
     return game.to_form(message, hint, 'lost')
 
 def wrong_guess(game):
+    """user has guessed wrong, but has moves left"""
     message = 'Wrong guess! Try again!'
     hint = produce_hint(game.answer)
     game.put()
     return game.to_form(message, hint, 'ongoing')
 
 def correct_guess(game):
+    """user has guessed correct, but not yet won"""
     message = 'Correct! Keep going!'
     hint = produce_hint(game.answer)
     game.put()

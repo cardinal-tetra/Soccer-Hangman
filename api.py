@@ -5,7 +5,7 @@ import endpoints
 from protorpc import remote, messages
 
 from models import User, Game, Score
-from models import StringMessage, GameForm, ScoreForm
+from models import StringMessage, GameForm, ScoreForm, ScoreForms
 from helpers import produce_hint, moves_gone, reveal_answer, get_by_urlsafe
 from helpers import update, game_won, game_over, wrong_guess, correct_guess
 
@@ -155,7 +155,21 @@ class soccerhangman(remote.Service):
             else:
                 return wrong_guess(game)
 
+    @endpoints.method(USER_REQUEST, ScoreForms, path='scores/user/{username}',
+                      name='get_user_scores', http_method='GET')
+    def get_user_scores(self, request):
+        """retrieves user scores that exist"""
+        # find the user
+        user = User.query(User.username == request.username).get()
+        if not user:
+            raise endpoints.NotFoundException('This user cannot be found')
+        # find the scores
+        scores = Score.query(Score.user == user.key).fetch()
+        if not scores:
+            raise endpoints.NotFoundException('No scores found for this user')
+        # return forms
+        return ScoreForms(items = [score.to_form() for score in scores])
 
-                                      
+    # TODO
 # launch endpoints API
 api = endpoints.api_server([soccerhangman])

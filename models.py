@@ -43,7 +43,7 @@ class Score(ndb.Model):
 
     def to_form(self):
         form = ScoreForm()
-        form.user_name = self.user.get().name
+        form.user_name = self.user.get().username
         form.date = str(self.date)
         form.won = self.won
         form.guesses = self.guesses
@@ -68,3 +68,7 @@ class ScoreForm(messages.Message):
     date = messages.StringField(2)
     won = messages.BooleanField(3)
     guesses = messages.IntegerField(4)
+
+class ScoreForms(messages.Message):
+    """outbound score information for multiple games"""
+    items = messages.MessageField(ScoreForm, 1, repeated=True)
