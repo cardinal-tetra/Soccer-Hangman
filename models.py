@@ -61,6 +61,10 @@ class GameForm(messages.Message):
     moves_left = messages.IntegerField(3, required=True)
     hint = messages.StringField(4, required=True)
     game_status = messages.StringField(5, required=True)
+
+class GameForms(messages.Message):
+    """outbound game information for multiple games"""
+    items = messages.MessageField(GameForm, 1, repeated=True)
     
 class ScoreForm(messages.Message):
     """outbound score information"""

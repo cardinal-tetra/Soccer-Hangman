@@ -1,6 +1,6 @@
 # a whole load of helper functions
 import logging
-from google.appengine.ext import ndb
+from google.appengine.ext import ndb, db
 import endpoints
 from models import Score
 from datetime import date

@@ -5,7 +5,7 @@ import endpoints
 from protorpc import remote, messages
 
 from models import User, Game, Score
-from models import StringMessage, GameForm, ScoreForm, ScoreForms
+from models import StringMessage, GameForm, GameForms, ScoreForm, ScoreForms
 from helpers import produce_hint, moves_gone, reveal_answer, get_by_urlsafe
 from helpers import update, game_won, game_over, wrong_guess, correct_guess
 
@@ -28,7 +28,7 @@ MOVE = endpoints.ResourceContainer(
 # define endpoints
 @endpoints.api(name='soccerhangman', version='v1')
 class soccerhangman(remote.Service):
-    """Game API where user plays hangman for soccer players"""
+    """Register user, create new game, urlsafe key to make guesses"""
 
     @endpoints.method(USER_REQUEST, StringMessage, path='user',
                       name='create_user', http_method='POST')
@@ -92,7 +92,7 @@ class soccerhangman(remote.Service):
     @endpoints.method(MOVE, GameForm, path='game/{urlsafe_game_key}',
                       name='make_move', http_method='PUT')
     def make_move(self, request):
-        """guess the player"""
+        """play the game"""
         # retrieve game entity by urlsafe key
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if not game:
@@ -158,7 +158,7 @@ class soccerhangman(remote.Service):
     @endpoints.method(USER_REQUEST, ScoreForms, path='scores/user/{username}',
                       name='get_user_scores', http_method='GET')
     def get_user_scores(self, request):
-        """retrieves user scores that exist"""
+        """retrieves user's scores"""
         # find the user
         user = User.query(User.username == request.username).get()
         if not user:
@@ -170,6 +170,37 @@ class soccerhangman(remote.Service):
         # return forms
         return ScoreForms(items = [score.to_form() for score in scores])
 
-    # TODO
+    @endpoints.method(NEW_GAME, GameForms, path='games/user/{username}',
+                      name='get_user_games', http_method='GET')
+    def get_user_games(self, request):
+        """retrieves user's active games"""
+        # find the user user
+        user = User.query(User.username == request.username).get()
+        if not user:
+            raise endpoints.NotFoundException('This user cannot be found')
+        # find the games
+        games = Game.query(Game.username ==
+                           user.key).filter(Game.game_status == 'ongoing').fetch()
+        if not games:
+            raise endpoints.NotFoundException('No games found for this user')
+        # return forms
+        return GameForms(items = [game.to_form('active game', produce_hint(game.answer),
+                                               'ongoing') for game in games])
+
+    @endpoints.method(GET_GAME, StringMessage, path='cancel/game',
+                       name='cancel_game', http_method='POST')
+    def cancel_game(self, request):
+        """delete active game"""
+        # retrieve game by urlsafe key
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        if not game:
+            raise endpoints.NotFoundException('Game not found')
+        # check that the game is ongoing
+        if game.game_status != 'ongoing':
+            raise endpoints.BadRequestException('Game is already over')
+        # delete the game
+        game.key.delete()
+        return StringMessage(message='Game deleted')
+        
 # launch endpoints API
 api = endpoints.api_server([soccerhangman])
