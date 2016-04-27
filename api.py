@@ -38,8 +38,8 @@ class soccerhangman(remote.Service):
     def create_user(self, request):
         """register new user"""
         # check that username doesn't already exist
-        if User.query(User.username == request.username):
-            endpoints.ConflictException('Username already exists')
+        if User.query(User.username == request.username).get():
+            raise endpoints.ConflictException('Username already exists')
             
         # store a new user profile entity
         user = User(username = request.username, email = request.email)
@@ -158,7 +158,7 @@ class soccerhangman(remote.Service):
             else:
                 return wrong_guess(game)
 
-    @endpoints.method(USER_REQUEST, ScoreForms, path='scores/user/{username}',
+    @endpoints.method(USER_REQUEST, ScoreForms, path='scores/{username}',
                       name='get_user_scores', http_method='GET')
     def get_user_scores(self, request):
         """retrieves user's scores"""
@@ -173,7 +173,7 @@ class soccerhangman(remote.Service):
         # return forms
         return ScoreForms(items = [score.to_form() for score in scores])
 
-    @endpoints.method(NEW_GAME, GameForms, path='games/user/{username}',
+    @endpoints.method(NEW_GAME, GameForms, path='games/{username}',
                       name='get_user_games', http_method='GET')
     def get_user_games(self, request):
         """retrieves user's active games"""
@@ -218,6 +218,16 @@ class soccerhangman(remote.Service):
         # generate and return leaderboard
         items = [[score.user.get().username, str(score.date), str(score.guesses)] for score in scores]
         return StringMessages(leaderboard = [StringMessage(message =', '.join(item)) for item in items])
-        
+
+    @endpoints.method(LIMIT, StringMessage, path='user/rankings',
+                      name='get_user_rankings', http_method='POST')
+    def get_user_rankings(self, request):
+        """return ranking of users"""
+        # check that limit specified is a number
+        limit = request.number_of_results
+        if not isinstance(limit, int):
+            raise endpoints.BadRequestException('You must specify a nunber')
+        return StringMessage(message='test')
+            
 # launch endpoints API
 api = endpoints.api_server([soccerhangman])
