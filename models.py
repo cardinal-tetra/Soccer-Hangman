@@ -51,8 +51,12 @@ class Score(ndb.Model):
 
 # define message classes
 class StringMessage(messages.Message):
-    """outbound string messages"""
+    """outbound string message"""
     message = messages.StringField(1, required=True)
+
+class StringMessages(messages.Message):
+    """outbound string messages"""
+    leaderboard = messages.MessageField(StringMessage, 1, repeated=True)
 
 class GameForm(messages.Message):
     """outbound game information"""

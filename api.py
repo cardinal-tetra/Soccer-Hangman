@@ -5,7 +5,7 @@ import endpoints
 from protorpc import remote, messages
 
 from models import User, Game, Score
-from models import StringMessage, GameForm, GameForms, ScoreForm, ScoreForms
+from models import StringMessage, StringMessages, GameForm, GameForms, ScoreForm, ScoreForms
 from helpers import produce_hint, moves_gone, reveal_answer, get_by_urlsafe
 from helpers import update, game_won, game_over, wrong_guess, correct_guess
 
@@ -24,6 +24,9 @@ MOVE = endpoints.ResourceContainer(
     urlsafe_game_key = messages.StringField(1, required=True),
     guess = messages.StringField(2, required=True))
 
+LIMIT = endpoints.ResourceContainer(
+    number_of_results = messages.IntegerField(1, default=5),)
+    
 
 # define endpoints
 @endpoints.api(name='soccerhangman', version='v1')
@@ -201,6 +204,20 @@ class soccerhangman(remote.Service):
         # delete the game
         game.key.delete()
         return StringMessage(message='Game deleted')
+
+    @endpoints.method(LIMIT, StringMessages, path='scores/highscores',
+                      name='get_high_scores', http_method='POST')
+    def get_high_scores(self, request):
+        """returns list of high scores"""
+        # check that limit specified is a number
+        limit = request.number_of_results
+        if not isinstance(limit, int):
+            raise endpoints.BadRequestException('You must specify a nunber')
+        # retrieve scores where game was won and order according to fewest guesses
+        scores = Score.query(Score.won == True).order(Score.guesses).fetch(limit)
+        # generate and return leaderboard
+        items = [[score.user.get().username, str(score.date), str(score.guesses)] for score in scores]
+        return StringMessages(leaderboard = [StringMessage(message =', '.join(item)) for item in items])
         
 # launch endpoints API
 api = endpoints.api_server([soccerhangman])
