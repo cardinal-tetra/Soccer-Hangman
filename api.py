@@ -66,7 +66,8 @@ class soccerhangman(remote.Service):
         answer = [[x, False] for x in answer] # boolean for whether letter guessed
 
         # store a game entity where user starts with 6 moves and 0 guesses
-        game = Game.new_game(user.key, answer, 6, 0, 'ongoing')
+        history = []
+        game = Game.new_game(user.key, answer, 6, 0, 'ongoing', history)
 
         # produce message
         message = 'A new game has been created for you %s' % request.username
@@ -80,7 +81,7 @@ class soccerhangman(remote.Service):
     @endpoints.method(GET_GAME, GameForm, path='game/{urlsafe_game_key}',
                       name='get_game', http_method='GET')
     def get_game(self, request):
-        """retrieves game information"""
+        """retrieve game information"""
         # retrieve game entity by urlsafe key
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if not game:
@@ -112,13 +113,13 @@ class soccerhangman(remote.Service):
             game = update(game)
             # check if the user has guessed correctly
             if request.guess == reveal_answer(game.answer):
-                return game_won(game)
+                return game_won(game, request.guess)
             else:
                 # if the user guessed wrong, check if they have moves left
                 if moves_gone(game.moves_left):
-                    return game_over(game)
+                    return game_over(game, request.guess, 'Incorrect! ')
                 else:
-                    return wrong_guess(game)
+                    return wrong_guess(game, request.guess)
         # if user's word guess is malformed
         elif len(request.guess) > 1 and not request.guess.isalpha():
             raise endpoints.BadRequestException('Word has to be all letters')
@@ -146,23 +147,23 @@ class soccerhangman(remote.Service):
                 if letter[1] == False: # they have not won the game
                     # check if moves exhausted
                     if moves_gone(game.moves_left) == True:
-                        return game_over(game, 'Correct, however ...')
+                        return game_over(game, guess, 'Correct, however ...')
                     else:
-                        return correct_guess(game)
+                        return correct_guess(game, guess)
             # user has won the game
-            return game_won(game)
+            return game_won(game, guess)
         # user has not guessed correctly
         else:
             # check if they have run out of moves
             if moves_gone(game.moves_left) == True:
-                return game_over(game, 'Wrong! ')
+                return game_over(game, guess, 'Wrong! ')
             else:
-                return wrong_guess(game)
+                return wrong_guess(game, guess)
 
     @endpoints.method(USER_REQUEST, ScoreForms, path='scores/{username}',
                       name='get_user_scores', http_method='GET')
     def get_user_scores(self, request):
-        """retrieves user's scores"""
+        """retrieve user's scores"""
         # find the user
         user = User.query(User.username == request.username).get()
         if not user:
@@ -177,7 +178,7 @@ class soccerhangman(remote.Service):
     @endpoints.method(NEW_GAME, GameForms, path='games/{username}',
                       name='get_user_games', http_method='GET')
     def get_user_games(self, request):
-        """retrieves user's active games"""
+        """retrieve user's active games"""
         # find the user user
         user = User.query(User.username == request.username).get()
         if not user:
@@ -218,7 +219,7 @@ class soccerhangman(remote.Service):
         scores = Score.query(Score.won == True).order(Score.guesses).fetch(limit)
         # generate and return leaderboard
         items = [[score.user.get().username, str(score.date), str(score.guesses)] for score in scores]
-        return StringMessages(ladder = [StringMessage(message =', '.join(item)) for item in items])
+        return StringMessages(table = [StringMessage(message =', '.join(item)) for item in items])
 
     @endpoints.method(LIMIT, StringMessages, path='user/rankings',
                       name='get_user_rankings', http_method='POST')
@@ -233,7 +234,20 @@ class soccerhangman(remote.Service):
         # generate and return rankings
         items = [[user.username, 'win ratio ' + str(user.win_ratio),
                   'average guesses ' + str(user.average_guesses)] for user in users]
-        return StringMessages(ladder = [StringMessage(message =', '.join(item)) for item in items])
+        return StringMessages(table = [StringMessage(message =', '.join(item)) for item in items])
+
+    @endpoints.method(GET_GAME, StringMessages, path='game/history/{urlsafe_game_key}',
+                      name='get_game_history', http_method='GET')
+    def get_game_history(self, request):
+        """return game history"""
+        # retrieve game entity
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        if not game:
+            raise endpoints.NotFoundException('Game not found')
+        # return the game history
+        items = game.history
+        return StringMessages(table = [StringMessage(message = str(item))
+                                        for item in items])
             
 # launch endpoints API
 api = endpoints.api_server([soccerhangman])

@@ -56,12 +56,16 @@ def update(game):
     game.guesses_made += 1
     return game
 
-def game_won(game):
+def game_won(game, guess):
     """user has won the game, update scores"""
     # update game entity
     game.game_status = 'won'
     message = 'You have won the game!'
     hint = reveal_answer(game.answer)
+    # store move in game history
+    record = ['guess: ' + guess + ', response: ' + message
+              + ', progress: ' + hint]
+    game.history.append(record)
     game.put()
     # save score entity
     score = Score(user = game.username, date = date.today(),
@@ -75,12 +79,16 @@ def game_won(game):
     user.put()
     return game.to_form(message, hint, 'won')
 
-def game_over(game, msg=''):
+def game_over(game, guess, msg=''):
     """user has lost the game, update scores"""
     # update game entity
     game.game_status = 'lost'
     message = msg + 'You have lost the game!'
     hint = reveal_answer(game.answer)
+    # store move in game history
+    record = ['guess: ' + guess + ', response: ' + message
+              + ', progress: ' + hint]
+    game.history.append(record)
     game.put()
     # save score entity
     score = Score(user = game.username, date = date.today(),
@@ -93,17 +101,25 @@ def game_over(game, msg=''):
     user.put()
     return game.to_form(message, hint, 'lost')
 
-def wrong_guess(game):
+def wrong_guess(game, guess):
     """user has guessed wrong, but has moves left"""
     message = 'Wrong guess! Try again!'
     hint = produce_hint(game.answer)
+    # store move in game history
+    record = ['guess: ' + guess + ', response: ' + message
+              + ', progress: ' + hint]
+    game.history.append(record)
     game.put()
     return game.to_form(message, hint, 'ongoing')
 
-def correct_guess(game):
+def correct_guess(game, guess):
     """user has guessed correct, but not yet won"""
     message = 'Correct! Keep going!'
     hint = produce_hint(game.answer)
+    # store move in game history
+    record = ['guess: ' + guess + ', response: ' + message
+              + ', progress: ' + hint]
+    game.history.append(record)
     game.put()
     return game.to_form(message, hint, 'ongoing')
     

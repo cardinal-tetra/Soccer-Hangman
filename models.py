@@ -33,13 +33,15 @@ class Game(ndb.Model):
     moves_left = ndb.IntegerProperty()
     guesses_made = ndb.IntegerProperty()
     game_status = ndb.StringProperty()
+    history = ndb.JsonProperty()
 
     @classmethod
-    def new_game(cls, username, answer, moves_left, guesses_made, game_status):
+    def new_game(cls, username, answer, moves_left,
+                 guesses_made, game_status, history):
         """stores a new game entity"""
         game = Game(username = username, answer = answer,
                     moves_left = moves_left, guesses_made = guesses_made,
-                    game_status = game_status)
+                    game_status = game_status, history = history)
         game.put()
         return game
 
@@ -74,7 +76,7 @@ class StringMessage(messages.Message):
 
 class StringMessages(messages.Message):
     """outbound string messages"""
-    ladder = messages.MessageField(StringMessage, 1, repeated=True)
+    table = messages.MessageField(StringMessage, 1, repeated=True)
 
 class GameForm(messages.Message):
     """outbound game information"""
