@@ -179,7 +179,7 @@ class soccerhangman(remote.Service):
                       name='get_user_games', http_method='GET')
     def get_user_games(self, request):
         """retrieve user's active games"""
-        # find the user user
+        # find the user
         user = User.query(User.username == request.username).get()
         if not user:
             raise endpoints.NotFoundException('This user cannot be found')
