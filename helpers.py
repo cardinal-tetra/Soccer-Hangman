@@ -58,24 +58,39 @@ def update(game):
 
 def game_won(game):
     """user has won the game, update scores"""
+    # update game entity
     game.game_status = 'won'
     message = 'You have won the game!'
     hint = reveal_answer(game.answer)
     game.put()
+    # save score entity
     score = Score(user = game.username, date = date.today(),
                   won = True, guesses = game.guesses_made)
     score.put()
+    # update user entity
+    user = game.username.get()
+    user.games_played += 1
+    user.games_won += 1
+    user.total_guesses += game.guesses_made
+    user.put()
     return game.to_form(message, hint, 'won')
 
 def game_over(game, msg=''):
     """user has lost the game, update scores"""
+    # update game entity
     game.game_status = 'lost'
     message = msg + 'You have lost the game!'
     hint = reveal_answer(game.answer)
     game.put()
+    # save score entity
     score = Score(user = game.username, date = date.today(),
                   won = False, guesses = game.guesses_made)
     score.put()
+    # update user entity
+    user = game.username.get()
+    user.games_played += 1
+    user.total_guesses += game.guesses_made
+    user.put()
     return game.to_form(message, hint, 'lost')
 
 def wrong_guess(game):

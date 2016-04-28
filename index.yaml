@@ -14,3 +14,9 @@ indexes:
   properties:
   - name: won
   - name: guesses
+
+- kind: User
+  properties:
+  - name: win_ratio
+    direction: desc
+  - name: average_guesses

@@ -42,7 +42,8 @@ class soccerhangman(remote.Service):
             raise endpoints.ConflictException('Username already exists')
             
         # store a new user profile entity
-        user = User(username = request.username, email = request.email)
+        user = User(username = request.username, email = request.email,
+                    games_won = 0, games_played = 0, total_guesses = 0)
         user.put()
         
         # alert the user of success
@@ -217,9 +218,9 @@ class soccerhangman(remote.Service):
         scores = Score.query(Score.won == True).order(Score.guesses).fetch(limit)
         # generate and return leaderboard
         items = [[score.user.get().username, str(score.date), str(score.guesses)] for score in scores]
-        return StringMessages(leaderboard = [StringMessage(message =', '.join(item)) for item in items])
+        return StringMessages(ladder = [StringMessage(message =', '.join(item)) for item in items])
 
-    @endpoints.method(LIMIT, StringMessage, path='user/rankings',
+    @endpoints.method(LIMIT, StringMessages, path='user/rankings',
                       name='get_user_rankings', http_method='POST')
     def get_user_rankings(self, request):
         """return ranking of users"""
@@ -227,7 +228,12 @@ class soccerhangman(remote.Service):
         limit = request.number_of_results
         if not isinstance(limit, int):
             raise endpoints.BadRequestException('You must specify a nunber')
-        return StringMessage(message='test')
+        # retrieve users ordered by win ratio and average guesses
+        users = User.query().order(-User.win_ratio).order(User.average_guesses).fetch(limit)
+        # generate and return rankings
+        items = [[user.username, 'win ratio ' + str(user.win_ratio),
+                  'average guesses ' + str(user.average_guesses)] for user in users]
+        return StringMessages(ladder = [StringMessage(message =', '.join(item)) for item in items])
             
 # launch endpoints API
 api = endpoints.api_server([soccerhangman])

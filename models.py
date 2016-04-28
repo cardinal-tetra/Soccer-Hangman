@@ -1,4 +1,5 @@
 # import modules and methods
+from __future__ import division
 from google.appengine.ext import ndb
 from protorpc import messages
 
@@ -7,6 +8,23 @@ class User(ndb.Model):
     """stores user records"""
     username = ndb.StringProperty()
     email = ndb.StringProperty()
+    games_won = ndb.IntegerProperty()
+    games_played = ndb.IntegerProperty()
+    total_guesses = ndb.IntegerProperty()
+    win_ratio = ndb.ComputedProperty(lambda self: self.first_division())
+    average_guesses = ndb.ComputedProperty(lambda self: self.second_division())
+
+    def first_division(self):
+        if self.games_won == 0:
+            return 0
+        else:
+            return self.games_won / self.games_played
+
+    def second_division(self):
+        if self.games_played == 0:
+            return 0
+        else:
+            return self.total_guesses / self.games_played
 
 class Game(ndb.Model):
     """stores game information and functions for gameflow"""
@@ -56,7 +74,7 @@ class StringMessage(messages.Message):
 
 class StringMessages(messages.Message):
     """outbound string messages"""
-    leaderboard = messages.MessageField(StringMessage, 1, repeated=True)
+    ladder = messages.MessageField(StringMessage, 1, repeated=True)
 
 class GameForm(messages.Message):
     """outbound game information"""
