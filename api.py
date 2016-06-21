@@ -1,11 +1,10 @@
-# import modules and methods
-import logging
+"""Define Endpoints API and methods"""
+
 import random
 import endpoints
 from protorpc import remote, messages
-
 from models import User, Game, Score
-from models import StringMessage, StringMessages, GameForm, GameForms, ScoreForm, ScoreForms
+from models import StringMessage, StringMessages, GameForm, GameForms, ScoreForms
 from helpers import produce_hint, moves_gone, reveal_answer, get_by_urlsafe
 from helpers import update, game_won, game_over, wrong_guess, correct_guess
 
@@ -25,10 +24,10 @@ MOVE = endpoints.ResourceContainer(
     guess = messages.StringField(2, required=True))
 
 LIMIT = endpoints.ResourceContainer(
-    number_of_results = messages.IntegerField(1, default=5),)
+    number_of_results = messages.IntegerField(1),)
     
 
-# define endpoints
+# define endpoints API
 @endpoints.api(name='soccerhangman', version='v1')
 class soccerhangman(remote.Service):
     """Register user, create new game, urlsafe key to make guesses"""
@@ -59,7 +58,7 @@ class soccerhangman(remote.Service):
         if not user:
             raise endpoints.NotFoundException('No such user is registered!')
 
-        # randomly generate answer and convert to nested list 
+        # randomly generate answer and convert to nested list
         players = ['ronaldo', 'messi', 'bale', 'rooney', 'suarez', 'fabregas',
                    'cech', 'sanchez', 'aguero', 'hazard', 'benzema', 'neymar']
         answer = list(random.choice(players))
@@ -128,7 +127,7 @@ class soccerhangman(remote.Service):
         if len(request.guess) == 1 and not request.guess.isalpha():
             raise endpoints.BadRequestException('Provide just one single letter!')
 
-        guess = request.guess.lower()           
+        guess = request.guess.lower()
 
         # update moves left and guesses made
         game = update(game)
@@ -207,8 +206,8 @@ class soccerhangman(remote.Service):
         game.key.delete()
         return StringMessage(message='Game deleted')
 
-    @endpoints.method(LIMIT, StringMessages, path='scores/highscores',
-                      name='get_high_scores', http_method='POST')
+    @endpoints.method(LIMIT, StringMessages, path='scores/highscores/{number_of_results}',
+                      name='get_high_scores', http_method='GET')
     def get_high_scores(self, request):
         """returns list of high scores"""
         # check that limit specified is a number
@@ -221,8 +220,8 @@ class soccerhangman(remote.Service):
         items = [[score.user.get().username, str(score.date), str(score.guesses)] for score in scores]
         return StringMessages(table = [StringMessage(message =', '.join(item)) for item in items])
 
-    @endpoints.method(LIMIT, StringMessages, path='user/rankings',
-                      name='get_user_rankings', http_method='POST')
+    @endpoints.method(LIMIT, StringMessages, path='user/rankings/{number_of_results}',
+                      name='get_user_rankings', http_method='GET')
     def get_user_rankings(self, request):
         """return ranking of users"""
         # check that limit specified is a number

@@ -1,4 +1,6 @@
-# a whole load of helper functions
+"""contains function for retrieving game entities by urlsafe_game_key
+and game logic functions"""
+
 import logging
 from google.appengine.ext import ndb
 import endpoints
@@ -6,7 +8,7 @@ from models import Score
 from datetime import date
 
 def get_by_urlsafe(urlsafe, model):
-    """returns entity corresponding to urlsafe key, code based on that in 'make a number'"""
+    """returns entity corresponding to urlsafe key'"""
     try:
         key = ndb.Key(urlsafe=urlsafe)
     except TypeError:

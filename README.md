@@ -1,27 +1,23 @@
 ## Soccer Hangman
 
-### Setting Up
-1. Update the value of application in app.yaml with the App ID you registered in the App Engine admin console that you want to use to host this application.
-2. Open up the GoogleAppEngineLauncher program and choose 'add existing application', specify the directory containing your application code, as well the ports you want for the application interface and the admin interface.
-3. Select 'run' which allows you to test your application on the relevant port you specified for localhost, add '_ah/api/explorer' to the URL to test the endpoints.
-4. You can also select 'deploy' which will allow you to test the endpoints at the URL: {App_ID}.appspot.com/_ah/api/explorer
+Soccer Hangman allows users to play a variant of that classic guessing game in the realm of famous soccer players. By making calls to relevant endpoints, users register themselves, and will receive a `urlsafe_game_key` upon creating a game. The user then makes calls to the `make_move` endpoint using the `urlsafe_game_key` to guess the answer either by specifying the whole word, or a single letter. Each attempt consumes one of the six guesses that users have upon beginning the game. Upon winning the game or losing it by running out of guesses, a score (detailing the number of guesses made and final result) will be saved for that game. Users can create and play multiple games simultaneously, and can retrieve information about their scores, active games, and rankings by making calls to the appropriate endpoints.
 
-### Game Description
-Soccer Hangman allows users to play the classic guessing game 'hangman' in the realm of famous soccer players. By making calls to relevant endpoints, users register themselves, and use their username to create games. The user then makes calls to the `make_move` endpoint using the `urlsafe_game_key` to guess the answer either by guessing the whole word, or by specifying single letters. Upon winning the game or losing it by running out of guesses, a score will be saved for that game. Users can play other games without finishing the initial one, can retrieve information about their scores, active games, and rankings by making calls to the appropriate endpoints.
+Now a spoiler, the answer will be one of these players: Ronaldo, Messi, Bale, Rooney, Suarez, Fabregas, Cech, Sanchez, Aguero, Hazard, Benzema, and Neymar.
 
-### Files Included
-- api.py: contains endpoints and most of the logic running the hangman game.
-- app.yaml: app configuration.
-- models.py: entity (sometimes accompanied by helper functions) and message definitions.
-- helpers.py: contains function for retrieving entities by `urlsafe_game_key` and functions with additional game logic.
+### Files
+- `api.py` : defines endpoints and contains most of the game logic.
+- `models.py` : contains entity and message class definitions.
+- `helpers.py` : contains function for retrieving entities by `urlsafe_game_key` and functions with additional game logic.
+- `app.yaml` : application configuration.
+- `cron.yaml` : cron job configuration.
 
-### Endpoints Included
+### Endpoints
 - **create_user**
  - Path: 'user'
  - Method: POST
- - Parameters: username, email(optional)
- - Returns: message confirming creation of user
- - Description: Create a unique user by specifying the username; a registered user must be specified in order to create and play games.
+ - Parameters: username, email (optional)
+ - Returns: Message confirming creation of user
+ - Description: Create a unique user by specifying the username; a registered user is required to create and play games.
 
 - **new_game**
  - Path: 'game'
@@ -35,28 +31,28 @@ Soccer Hangman allows users to play the classic guessing game 'hangman' in the r
  - Method: GET
  - Parameters: urlsafe_game_key
  - Returns: GameForm with current game state
- - Description: Allows access to information for a game corresponding to the urlsafe_game_key.
+ - Description: Access information for a game corresponding to the urlsafe_game_key.
  
 - **make_move**
  - Path: 'game/{urlsafe_game_key}'
  - Method: PUT
  - Parameters: urlsafe_game_key, guess
  - Returns: GameForm with game state after guess has been processed
- - Description: Allows user to specify the game using the `urlsafe_game_key` and the guess they want to make for it. The guess can be a letter or an entire word, and endpoint will return errors if malformed guesses are made or relevant game does not exist or has ended.
+ - Description: Allows user to specify the game using the `urlsafe_game_key` and the guess they want to make for it. The guess can be a letter or an entire word. Errors will be returned if malformed guesses are made or relevant game does not exist or has ended.
  
 - **get_user_scores**
  - Path: 'scores/{username}'
  - Method: GET
  - Parameters: username
  - Returns: ScoreForms containing information about games the user completed
- - Description: Every time a user completes a game, a score entity is saved for that game with information about number of guesses, and whether the user won. This function retrieves all the scores for the user specified.
+ - Description: Every time a user completes a game, a score entity is saved for that game with information about the number of guesses and outcome. This function retrieves all the scores for the user specified.
 
 - **get_user_games**
  - Path: 'games/{username}
  - Method: GET
  - Parameters: username
- - Returns: GameForms showing the current game states for active games registered under the username specified.
- - Description: Allows user to retrieve game information (key, guesses made) about their active games.
+ - Returns: GameForms displaying information for active games registered under the username specified.
+ - Description: Allows user to retrieve a list of their active games with information such as urlsafe_game_key and game state.
  
 - **cancel_game**
  - Path: 'cancel/game'
@@ -67,21 +63,21 @@ Soccer Hangman allows users to play the classic guessing game 'hangman' in the r
  
 - **get_high_scores**
  - Path: 'scores/highscores'
- - Method: POST
- - Parameters: number_of_results (optional)
- - Returns: message strings displaying high scores
- - Description: Allows user to retrieve a list of high scores, which is essentially a record of games won and ordered by number of guesses made (the fewer the better); user can also pass in optional `number_of_results` parameter to limit results returned. Note that we use the POST method because using the GET method would make it mandatory for the user to specify `number_of_results`.
+ - Method: GET
+ - Parameters: number_of_results
+ - Returns: Message strings displaying high scores
+ - Description: Retrieve a list of games won by users, ordered according to guesses made (the fewer the better).
  
 - **get_user_rankings**
  - Path: 'user/rankings'
- - Method: POST
- - Parameters: number_of_results (optional)
- - Returns: message strings displaying username and performance stats.
- - Description: Allows user to retrieve a list of users who have completed games, ranked according to their performance statistics (like win ratio and average guesses per game). As before, user can also pass in optional `number_of_results` parameter to limit results returned. Note that we use the POST method because using the GET method would make it mandatory for the user to specify `number_of_results`.
+ - Method: GET
+ - Parameters: number_of_results
+ - Returns: Message strings displaying users ranked by performance stats.
+ - Description: Retrieve a list of users who have completed games, ranked according to their performance statistics (like win ratio and average guesses per game). As before, user passes in `number_of_results` parameter to specify a limit on how many results they want returned.
  
 - **get_game_history**
  - Path: 'game/history/{urlsafe_game_key}'
  - Method: GET
  - Parameters: urlsafe_game_key
- - Returns: message strings displaying a record of historical guesses and results for game specified under `urlsafe_game_key`
- - Description: user can see a record of all historical guesses, results, and progress relating to the game specified under the `urlsafe_game_key`
+ - Returns: Message strings displaying a record game states for the game corresponding to `urlsafe_game_key`
+ - Description: Returns a record of all historical guesses, results, and progress relating to the game specified under the `urlsafe_game_key`

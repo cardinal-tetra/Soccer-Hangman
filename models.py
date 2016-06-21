@@ -1,3 +1,5 @@
+"""entity and message class definitions"""
+
 # import modules and methods
 from __future__ import division
 from google.appengine.ext import ndb
